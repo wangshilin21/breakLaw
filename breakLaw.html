@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>违纪成本计算器 - 党纪学习教育工具</title>
+  <!-- 引入外部资源 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <!-- Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#DC2626', // 主红色
+            secondary: '#B91C1C', // 深红色
+            accent: '#FCA5A5', // 浅红色
+            neutral: '#1F2937', // 深灰色
+            light: '#F9FAFB', // 浅灰色背景
+            success: '#10B981', // 绿色（选中状态）
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <!-- 自定义工具类 -->
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .card-shadow {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      }
+      .btn-hover {
+        @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5;
+      }
+      .scroll-smooth {
+        scroll-behavior: smooth;
+      }
+      .matrix-btn {
+        @apply bg-white border border-gray-200 rounded-lg p-3 flex flex-col items-center justify-center text-center btn-hover transition-all duration-300;
+      }
+      .matrix-btn.active {
+        @apply bg-primary/10 border-primary text-primary;
+      }
+      .amount-btn {
+        @apply bg-white border border-gray-200 rounded-lg py-2 px-4 text-sm btn-hover;
+      }
+      .amount-btn.active {
+        @apply bg-success/10 border-success text-success;
+      }
+    }
+  </style>
+</head>
+<body class="bg-light font-sans text-neutral min-h-screen scroll-smooth">
+  <!-- 顶部导航 -->
+  <header class="bg-primary text-white sticky top-0 z-50 shadow-md">
+    <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+      <h1 class="text-xl font-bold flex items-center">
+        <i class="fa fa-balance-scale mr-2"></i>违纪成本计算器
+      </h1>
+      <button id="infoBtn" class="btn-hover p-2 rounded-full bg-secondary/50">
+        <i class="fa fa-info-circle"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- 主内容区 -->
+  <main class="container mx-auto px-4 py-6">
+    <!-- 简介区域 -->
+    <section class="mb-8 bg-white rounded-xl p-5 card-shadow">
+      <h2 class="text-lg font-bold text-primary mb-3 flex items-center">
+        <i class="fa fa-exclamation-circle mr-2"></i>使用说明
+      </h2>
+      <p class="text-sm text-gray-600 leading-relaxed">
+        本计算器根据《中国共产党纪律处分条例》和《中华人民共和国刑法》设计，采用矩阵式操作界面。
+        请先选择违纪类型，再输入或选择相应金额/情节，系统将自动计算对应的党纪处分、刑事处罚、政治损失和经济损失，
+        帮助党员干部直观了解违纪违法的严重后果，增强纪律意识和法律意识。
+      </p>
+    </section>
+
+    <!-- 违纪类型选择区（矩阵式按钮） -->
+    <section class="mb-8">
+      <h2 class="text-lg font-bold text-primary mb-4 flex items-center">
+        <i class="fa fa-th mr-2"></i>选择违纪类型
+      </h2>
+      <div class="bg-white rounded-xl p-4 card-shadow">
+        <div id="violationMatrix" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <!-- 矩阵式按钮将通过JS动态生成 -->
+        </div>
+      </div>
+    </section>
+
+    <!-- 金额/情节选择区 -->
+    <section id="amountSection" class="mb-8 hidden">
+      <h2 class="text-lg font-bold text-primary mb-4 flex items-center">
+        <i class="fa fa-money mr-2"></i>选择金额/情节程度
+      </h2>
+      <div class="bg-white rounded-xl p-5 card-shadow">
+        <!-- 当前选中的违纪类型 -->
+        <div id="currentViolation" class="mb-4 text-sm p-3 bg-gray-50 rounded-lg">
+          <span class="font-medium">当前选择：</span>
+          <span id="selectedViolationName" class="text-primary"></span>
+        </div>
+        
+        <!-- 金额快速选择按钮 -->
+        <div id="amountButtons" class="grid grid-cols-3 gap-2 mb-4">
+          <!-- 金额按钮将通过JS动态生成 -->
+        </div>
+        
+        <!-- 自定义金额输入 -->
+        <div class="mb-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">自定义金额（元）</label>
+          <div class="flex">
+            <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+              ¥
+            </span>
+            <input type="number" id="customAmount" min="0" step="1000" 
+                   class="flex-1 px-3 py-2 border border-gray-300 rounded-r-lg focus:ring-primary focus:border-primary text-sm"
+                   placeholder="请输入具体金额">
+          </div>
+          <p class="text-xs text-gray-500 mt-1">请输入阿拉伯数字，最小单位为1000元</p>
+        </div>
+        
+        <!-- 金额档次说明 -->
+        <div id="amountLevelInfo" class="mt-4 p-3 bg-blue-50 rounded-lg text-xs text-gray-600">
+          <!-- 金额档次说明将通过JS动态生成 -->
+        </div>
+      </div>
+    </section>
+
+    <!-- 计算按钮 -->
+    <section class="mb-8 text-center">
+      <button id="calculateBtn" class="bg-primary hover:bg-secondary text-white font-bold py-3 px-8 rounded-full btn-hover w-full max-w-xs disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+        <i class="fa fa-calculator mr-2"></i>计算违纪成本
+      </button>
+    </section>
+
+    <!-- 计算结果区 -->
+    <section id="resultSection" class="mb-8 hidden">
+      <h2 class="text-lg font-bold text-primary mb-4 flex items-center">
+        <i class="fa fa-bar-chart mr-2"></i>违纪成本计算结果
+      </h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- 纪律处分结果 -->
+        <div class="bg-white rounded-xl p-5 card-shadow transform transition-all duration-500 scale-95 opacity-0">
+          <h3 class="font-bold text-lg mb-3 text-secondary flex items-center">
+            <i class="fa fa-gavel mr-2"></i>党纪处分
+          </h3>
+          <div id="punishmentResult" class="text-sm space-y-2">
+            <!-- 处分结果将通过JS动态生成 -->
+          </div>
+        </div>
+        
+        <!-- 刑事处罚结果 -->
+        <div class="bg-white rounded-xl p-5 card-shadow transform transition-all duration-500 scale-95 opacity-0">
+          <h3 class="font-bold text-lg mb-3 text-secondary flex items-center">
+            <i class="fa fa-balance-scale mr-2"></i>刑事处罚（刑法规定）
+          </h3>
+          <div id="criminalPunishmentResult" class="text-sm space-y-2">
+            <!-- 刑事处罚结果将通过JS动态生成 -->
+          </div>
+        </div>
+        
+        <!-- 政治损失结果 -->
+        <div class="bg-white rounded-xl p-5 card-shadow transform transition-all duration-500 scale-95 opacity-0">
+          <h3 class="font-bold text-lg mb-3 text-secondary flex items-center">
+            <i class="fa fa-user-times mr-2"></i>政治损失
+          </h3>
+          <div id="politicalLossResult" class="text-sm space-y-2">
+            <!-- 政治损失结果将通过JS动态生成 -->
+          </div>
+        </div>
+        
+        <!-- 经济损失结果 -->
+        <div class="bg-white rounded-xl p-5 card-shadow transform transition-all duration-500 scale-95 opacity-0">
+          <h3 class="font-bold text-lg mb-3 text-secondary flex items-center">
+            <i class="fa fa-money mr-2"></i>经济损失
+          </h3>
+          <div id="economicLossResult" class="text-sm space-y-2">
+            <!-- 经济损失结果将通过JS动态生成 -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 条例参考区 -->
+    <section id="regulationSection" class="mb-8 hidden">
+      <h2 class="text-lg font-bold text-primary mb-4 flex items-center">
+        <i class="fa fa-book mr-2"></i>相关条例参考
+      </h2>
+      <div class="bg-white rounded-xl p-5 card-shadow">
+        <div id="regulationContent" class="text-sm space-y-3 max-h-[40vh] overflow-y-auto pr-2">
+          <!-- 条例参考内容将通过JS动态生成 -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 底部信息 -->
+  <footer class="bg-neutral text-white py-6">
+    <div class="container mx-auto px-4 text-center text-sm">
+      <p class="mb-2">© 2025 党纪学习教育工具 | 违纪成本计算器</p>
+      <p class="text-gray-400">本工具仅作纪律教育使用，具体处分和判决以正式法律文书为准</p>
+    </div>
+  </footer>
+
+  <!-- 信息模态框 -->
+  <div id="infoModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4 card-shadow transform transition-all duration-300 scale-95 opacity-0" id="modalContent">
+      <div class="flex justify-between items-start mb-4">
+        <h3 class="text-lg font-bold text-primary">关于违纪成本计算器</h3>
+        <button id="closeModal" class="text-gray-400 hover:text-gray-600">
+          <i class="fa fa-times text-xl"></i>
+        </button>
+      </div>
+      <div class="text-sm text-gray-600 space-y-3">
+        <p>本计算器基于《中国共产党纪律处分条例》和《中华人民共和国刑法》制定，采用矩阵式操作界面，支持按金额分级计算。</p>
+        <p>使用步骤：</p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>1. 选择违纪类型（矩阵式按钮）</li>
+          <li>2. 选择或输入金额/情节程度</li>
+          <li>3. 点击计算按钮查看详细成本</li>
+          <li>4. 系统将展示党纪处分、刑事处罚、政治损失和经济损失</li>
+        </ul>
+        <p class="text-primary font-medium">纪律严明是党的光荣传统和独特优势，法律面前人人平等，请勿触碰纪律和法律红线！</p>
+      </div>
+      <button id="confirmModal" class="mt-6 w-full bg-primary hover:bg-secondary text-white font-bold py-2 rounded-lg btn-hover">
+        我已了解
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // 违纪行为数据（包含金额分级和刑法判决）
+    const violationData = [
+      {
+        id: 1,
+        name: "违规收受礼金",
+        icon: "fa-gift",
+        levels: [
+          { min: 0, max: 30000, level: "一般", 
+            punishment: ["警告", "严重警告"],
+            criminalPunishment: ["不构成刑事犯罪", "给予党纪政务处分"],
+            politicalLoss: ["影响职务晋升", "取消评先评优资格"],
+            economicLoss: ["没收违纪所得", "扣减绩效工资"],
+            otherImpact: ["影响个人声誉", "通报批评"]
+          },
+          { min: 30000, max: 200000, level: "较重（受贿罪）", 
+            punishment: ["撤销党内职务", "留党察看"],
+            criminalPunishment: ["三年以下有期徒刑或者拘役", "并处罚金"],
+            politicalLoss: ["撤销党内职务", "降低政治待遇", "失去公职"],
+            economicLoss: ["没收违法所得", "罚金（1-10万元）", "取消退休待遇"],
+            otherImpact: ["影响家庭生活", "子女政审受影响", "终身污点"]
+          },
+          { min: 200000, max: 3000000, level: "严重（受贿罪）", 
+            punishment: ["开除党籍"],
+            criminalPunishment: ["三年以上十年以下有期徒刑", "并处罚金或者没收财产"],
+            politicalLoss: ["开除党籍", "开除公职", "终身不得录用", "政治生命终结"],
+            economicLoss: ["没收全部违法所得", "罚金（10-50万元）", "没收个人财产"],
+            otherImpact: ["刑事责任", "家庭声誉受损", "社会评价极低"]
+          },
+          { min: 3000000, max: Infinity, level: "特别严重（受贿罪）", 
+            punishment: ["开除党籍"],
+            criminalPunishment: ["十年以上有期徒刑、无期徒刑或者死刑", "并处没收财产"],
+            politicalLoss: ["开除党籍", "开除公职", "终身不得录用", "政治生命终结"],
+            economicLoss: ["没收全部财产", "高额罚金", "彻底失去经济来源"],
+            otherImpact: ["长期监禁", "家庭破碎", "严重影响子女前途"]
+          }
+        ],
+        regulations: [
+          "《中国共产党纪律处分条例》第八十八条：收受可能影响公正执行公务的礼品、礼金、消费卡和有价证券、股权、其他金融产品等财物，情节较轻的，给予警告或者严重警告处分；情节较重的，给予撤销党内职务或者留党察看处分；情节严重的，给予开除党籍处分。",
+          "《中华人民共和国刑法》第三百八十五条：国家工作人员利用职务上的便利，索取他人财物的，或者非法收受他人财物，为他人谋取利益的，是受贿罪。",
+          "《最高人民法院、最高人民检察院关于办理贪污贿赂刑事案件适用法律若干问题的解释》第一条：贪污或者受贿数额在三万元以上不满二十万元的，应当认定为刑法第三百八十三条第一款规定的“数额较大”，依法判处三年以下有期徒刑或者拘役，并处罚金。"
+        ],
+        quickAmounts: [5000, 30000, 200000, 500000, 3000000]
+      },
+      {
+        id: 2,
+        name: "贪污公款",
+        icon: "fa-money",
+        levels: [
+          { min: 0, max: 30000, level: "一般", 
+            punishment: ["警告", "严重警告", "撤销党内职务"],
+            criminalPunishment: ["不构成刑事犯罪", "给予党纪政务处分"],
+            politicalLoss: ["影响职务晋升", "取消评先评优", "降低考核等级"],
+            economicLoss: ["退赔贪污款项", "扣减绩效", "罚款"],
+            otherImpact: ["通报批评", "个人形象受损"]
+          },
+          { min: 30000, max: 200000, level: "较重（贪污罪）", 
+            punishment: ["留党察看", "开除党籍"],
+            criminalPunishment: ["三年以下有期徒刑或者拘役", "并处罚金"],
+            politicalLoss: ["开除党籍", "开除公职", "失去政治待遇"],
+            economicLoss: ["退赔全部款项", "罚金（1-10万元）", "取消退休待遇"],
+            otherImpact: ["刑事责任", "家庭受影响", "社会评价降低"]
+          },
+          { min: 200000, max: 3000000, level: "严重（贪污罪）", 
+            punishment: ["开除党籍"],
+            criminalPunishment: ["三年以上十年以下有期徒刑", "并处罚金或者没收财产"],
+            politicalLoss: ["开除党籍", "开除公职", "终身不得录用"],
+            economicLoss: ["没收个人财产", "罚金（10-50万元）", "彻底失去经济来源"],
+            otherImpact: ["长期监禁", "家庭破碎", "子女前途受影响"]
+          },
+          { min: 3000000, max: Infinity, level: "特别严重（贪污罪）", 
+            punishment: ["开除党籍"],
+            criminalPunishment: ["十年以上有期徒刑、无期徒刑或者死刑", "并处没收财产"],
+            politicalLoss: ["开除党籍", "开除公职", "政治生命终结"],
+            economicLoss: ["没收全部财产", "剥夺全部经济权利"],
+            otherImpact: ["终身监禁（情节特别严重）", "家族声誉扫地"]
+          }
+        ],
+        regulations: [
+          "《中国共产党纪律处分条例》第一百零四条：利用职权或者职务上的影响，侵占非本人经管的公私财物，或者以象征性地支付钱款等方式侵占公私财物，或者无偿、象征性地支付报酬接受服务、使用劳务，情节较轻的，给予警告或者严重警告处分；情节较重的，给予撤销党内职务或者留党察看处分；情节严重的，给予开除党籍处分。",
+          "《中华人民共和国刑法》第三百八十二条：国家工作人员利用职务上的便利，侵吞、窃取、骗取或者以其他手段非法占有公共财物的，是贪污罪。",
+          "《最高人民法院、最高人民检察院关于办理贪污贿赂刑事案件适用法律若干问题的解释》第二条：贪污或者受贿数额在二十万元以上不满三百万元的，应当认定为刑法第三百八十三条第一款规定的“数额巨大”，依法判处三年以上十年以下有期徒刑，并处罚金或者没收财产。"
+        ],
+        quickAmounts: [10000, 30000, 200000, 500000, 3000000]
+      },
+      {
+        id: 3,
+        name: "挪用公款",
+        icon: "fa-exchange",
+        levels: [
+          { min: 0, max: 50000, level: "一般", 
+            punishment: ["警告", "严重警告", "撤销党内职务"],
+            criminalPunishment: ["不构成刑事犯罪", "给予党纪政务处分"],
+            politicalLoss: ["影响职务晋升", "取消评先评优", "降低政治信任"],
+            economicLoss: ["退还挪用款项", "支付利息", "扣减绩效"],
+            otherImpact: ["通报批评", "岗位调整"]
+          },
+          { min: 50000, max: 200000, level: "较重（挪用公款罪）", 
+            punishment: ["留党察看", "开除党籍"],
+            criminalPunishment: ["五年以下有期徒刑或者拘役"],
+            politicalLoss: ["开除党籍", "开除公职", "失去政治待遇"],
+            economicLoss: ["退还全部款项及利息", "罚金（1-10万元）", "取消退休待遇"],
+            otherImpact: ["刑事责任", "家庭受影响", "职业前途终结"]
+          },
+          { min: 200000, max: 1000000, level: "严重（挪用公款罪）", 
+            punishment: ["开除党籍"],
+            criminalPunishment: ["五年以上有期徒刑"],
+            politicalLoss: ["开除党籍", "开除公职", "终身不得录用"],
+            economicLoss: ["退还全部款项及利息", "罚金（10-30万元）", "没收部分财产"],
+            otherImpact: ["长期监禁", "家庭破碎", "社会评价极低"]
+          },
+          { min: 1000000, max: Infinity, level: "特别严重（挪用公款罪）", 
+            punishment: ["开除党籍"],
+            criminalPunishment: ["十年以上有期徒刑或者无期徒刑"],
+            politicalLoss: ["开除党籍", "开除公职", "政治生命终结"],
+            economicLoss: ["没收个人财产", "剥夺经济权利"],
+            otherImpact: ["终身监禁（情节特别严重）", "家族声誉受损"]
+          }
+        ],
+        regulations: [
+          "《中国共产党纪律处分条例》第一百零二条：利用职权或者职务上的影响，违反有关规定占用公物归个人使用，时间超过六个月，情节较重的，给予警告或者严重警告处分；情节严重的，给予撤销党内职务处分。",
+          "《中华人民共和国刑法》第三百八十四条：国家工作人员利用职务上的便利，挪用公款归个人使用，进行非法活动的，或者挪用公款数额较大、进行营利活动的，或者挪用公款数额较大、超过三个月未还的，是挪用公款罪，处五年以下有期徒刑或者拘役；情节严重的，处五年以上有期徒刑。挪用公款数额巨大不退还的，处十年以上有期徒刑或者无期徒刑。",
+          "《最高人民法院、最高人民检察院关于办理贪污贿赂刑事案件适用法律若干问题的解释》第五条：挪用公款归个人使用，进行非法活动，数额在三万元以上的，应当依照刑法第三百八十四条的规定以挪用公款罪追究刑事责任；数额在三百万元以上的，应当认定为刑法第三百八十四条第一款规定的“数额巨大”。"
+        ],
+        quickAmounts: [20000, 50000, 200000, 500000, 1000000]
+      },
+      {
+        id: 4,
+        name: "滥用职权",
+        icon: "fa-balance-scale",
+        levels: [
+          { min: 0, max: 100000, level: "一般", 
+            punishment: ["警告", "严重警告", "撤销党内职务"],
+            criminalPunishment: ["不构成刑事犯罪", "给予党纪政务处分"],
+            politicalLoss: ["影响职务晋升", "取消评先评优", "降低政治信任"],
+            economicLoss: ["扣减绩效", "罚款", "影响福利待遇"],
+            otherImpact: ["通报批评", "岗位调整", "单位声誉受损"]
+          },
+          { min: 100000, max: 500000, level: "较重（滥用职权罪）", 
+            punishment: ["留党察看", "开除党籍"],
+            criminalPunishment: ["三年以下有期徒刑或者拘役"],
+            politicalLoss: ["开除党籍", "开除公职", "失去政治待遇"],
+            economicLoss: ["可能面临国家赔偿连带责任", "罚金", "取消退休待遇"],
+            otherImpact: ["刑事责任", "家庭受影响", "职业前途终结"]
+          },
+          { min: 500000, max: 1000000, level: "严重（滥用职权罪）", 
+            punishment: ["开除党籍"],
+            criminalPunishment: ["三年以上七年以下有期徒刑"],
+            politicalLoss: ["开除党籍", "开除公职", "终身不得录用"],
+            economicLoss: ["国家赔偿连带责任", "罚金", "没收财产"],
+            otherImpact: ["长期监禁", "家庭破碎", "社会评价极低"]
+          },
+          { min: 1000000, max: Infinity, level: "特别严重（滥用职权罪）", 
+            punishment: ["开除党籍"],
+            criminalPunishment: ["七年以上有期徒刑"],
+            politicalLoss: ["开除党籍", "开除公职", "政治生命终结"],
+            economicLoss: ["没收个人全部财产", "终身经济赔偿责任"],
+            otherImpact: ["长期监禁", "家族声誉扫地", "严重社会影响"]
+          }
+        ],
+        regulations: [
+          "《中国共产党纪律处分条例》第一百一十六条：有下列行为之一，对直接责任者和领导责任者，情节较重的，给予警告或者严重警告处分；情节严重的，给予撤销党内职务或者留党察看处分：（一）对涉及群众生产、生活等切身利益的问题依照政策或者有关规定能解决而不及时解决，庸懒无为、效率低下，造成不良影响的；（二）对符合政策的群众诉求消极应付、推诿扯皮，损害党群、干群关系的；（三）对待群众态度恶劣、简单粗暴，造成不良影响的；（四）弄虚作假，欺上瞒下，损害群众利益的；（五）有其他不作为、乱作为等损害群众利益行为的。",
+          "《中华人民共和国刑法》第三百九十七条：国家机关工作人员滥用职权或者玩忽职守，致使公共财产、国家和人民利益遭受重大损失的，处三年以下有期徒刑或者拘役；情节特别严重的，处三年以上七年以下有期徒刑。本法另有规定的，依照规定。"
+        ],
+        quickAmounts: [50000, 100000, 500000, 800000, 1000000]
+      },
+      {
+        id: 5,
+        name: "权钱交易",
+        icon: "fa-handshake-o",
+        levels: [
+          { min: 0, max: 30000, level: "一般", 
+            punishment: ["警告", "严重警告", "撤销党内职务"],
+            criminalPunishment: ["不构成刑事犯罪", "给予党纪政务处分"],
+            politicalLoss: ["影响职务晋升", "取消评先评优", "降低政治待遇"],
+            economicLoss: ["没收违纪所得", "扣减绩效", "罚款"],
+            otherImpact: ["通报批评", "个人声誉受损"]
+          },
+          { min: 30000, max: 200000, level: "较重（受贿罪/行贿罪）", 
+            punishment: ["留党察看", "开除党籍"],
+            criminalPunishment: ["三年以下有期徒刑或者拘役", "并处罚金"],
+            politicalLoss: ["开除党籍", "开除公职", "失去政治生命"],
+            economicLoss: ["没收违法所得", "罚金（1-10万元）", "取消退休待遇"],
+            otherImpact: ["刑事责任", "家庭受影响", "子女政审受影响"]
+          },
+          { min: 200000, max: 3000000, level: "严重（受贿罪/行贿罪）", 
+            punishment: ["开除党籍"],
+            criminalPunishment: ["三年以上十年以下有期徒刑", "并处罚金或者没收财产"],
+            politicalLoss: ["开除党籍", "开除公职", "终身不得录用"],
+            economicLoss: ["没收全部财产", "罚金（10-50万元）", "彻底失去经济来源"],
+            otherImpact: ["长期监禁", "家庭破碎", "社会评价极低"]
+          },
+          { min: 3000000, max: Infinity, level: "特别严重（受贿罪/行贿罪）", 
+            punishment: ["开除党籍"],
+            criminalPunishment: ["十年以上有期徒刑、无期徒刑或者死刑", "并处没收财产"],
+            politicalLoss: ["开除党籍", "开除公职", "政治生命终结"],
+            economicLoss: ["没收全部财产", "剥夺全部经济权利"],
+            otherImpact: ["终身监禁（情节特别严重）", "家族声誉扫地"]
+          }
+        ],
+        regulations: [
+          "《中国共产党纪律处分条例》第八十八条：收受可能影响公正执行公务的礼品、礼金、消费卡和有价证券、股权、其他金融产品等财物，情节较轻的，给予警告或者严重警告处分；情节较重的，给予撤销党内职务或者留党察看处分；情节严重的，给予开除党籍处分。",
+          "《中华人民共和国刑法》第三百八十五条：国家工作人员利用职务上的便利，索取他人财物的，或者非法收受他人财物，为他人谋取利益的，是受贿罪。",
+          "《中华人民共和国刑法》第三百八十九条：为谋取不正当利益，给予国家工作人员以财物的，是行贿罪。"
+        ],
+        quickAmounts: [5000, 30000, 200000, 500000, 3000000]
+      },
+      {
+        id: 6,
+        name: "私分国有资产",
+        icon: "fa-users",
+        levels: [
+          { min: 0, max: 100000, level: "一般", 
+            punishment: ["警告", "严重警告", "撤销党内职务"],
+            criminalPunishment: ["不构成刑事犯罪", "给予党纪政务处分"],
+            politicalLoss: ["影响职务晋升", "取消评先评优", "降低考核等级"],
+            economicLoss: ["退赔所得款项", "扣减绩效", "罚款"],
+            otherImpact: ["通报批评", "单位声誉受损"]
+          },
+          { min: 100000, max: 500000, level: "较重（私分国有资产罪）", 
+            punishment: ["留党察看", "开除党籍"],
+            criminalPunishment: ["三年以下有期徒刑或者拘役", "并处或者单处罚金"],
+            politicalLoss: ["开除党籍", "开除公职", "失去政治待遇"],
+            economicLoss: ["退赔全部款项", "罚金（1-10万元）", "取消退休待遇"],
+            otherImpact: ["刑事责任", "家庭受影响", "职业前途终结"]
+          },
+          { min: 500000, max: 1000000, level: "严重（私分国有资产罪）", 
+            punishment: ["开除党籍"],
+            criminalPunishment: ["三年以上七年以下有期徒刑", "并处罚金"],
+            politicalLoss: ["开除党籍", "开除公职", "终身不得录用"],
+            economicLoss: ["没收个人财产", "罚金（10-30万元）", "彻底失去经济来源"],
+            otherImpact: ["长期监禁", "家庭破碎", "社会评价极低"]
+          },
+          { min: 1000000, max: Infinity, level: "特别严重（私分国有资产罪）", 
+            punishment: ["开除党籍"],
+            criminalPunishment: ["七年以上有期徒刑", "并处罚金"],
+            politicalLoss: ["开除党籍", "开除公职", "政治生命终结"],
+            economicLoss: ["没收全部财产", "剥夺经济权利"],
+            otherImpact: ["长期监禁", "家族声誉受损", "严重社会影响"]
+          }
+        ],
+        regulations: [
+          "《中国共产党纪律处分条例》第一百零四条：利用职权或者职务上的影响，侵占非本人经管的公私财物，或者以象征性地支付钱款等方式侵占公私财物，或者无偿、象征性地支付报酬接受服务、使用劳务，情节较轻的，给予警告或者严重警告处分；情节较重的，给予撤销党内职务或者留党察看处分；情节严重的，给予开除党籍处分。",
+          "《中华人民共和国刑法》第三百九十六条：国家机关、国有公司、企业、事业单位、人民团体，违反国家规定，以单位名义将国有资产集体私分给个人，数额较大的，对其直接负责的主管人员和其他直接责任人员，处三年以下有期徒刑或者拘役，并处或者单处罚金；数额巨大的，处三年以上七年以下有期徒刑，并处罚金。"
+        ],
+        quickAmounts: [50000, 100000, 300000, 500000, 1000000]
+      }
+    ];
+
+    // DOM 元素
+    const violationMatrix = document.getElementById('violationMatrix');
+    const amountSection = document.getElementById('amountSection');
+    const selectedViolationName = document.getElementById('selectedViolationName');
+    const amountButtons = document.getElementById('amountButtons');
+    const customAmount = document.getElementById('customAmount');
+    const amountLevelInfo = document.getElementById('amountLevelInfo');
+    const calculateBtn = document.getElementById('calculateBtn');
+    const resultSection = document.getElementById('resultSection');
+    const regulationSection = document.getElementById('regulationSection');
+    const punishmentResult = document.getElementById('punishmentResult');
+    const criminalPunishmentResult = document.getElementById('criminalPunishmentResult');
+    const politicalLossResult = document.getElementById('politicalLossResult');
+    const economicLossResult = document.getElementById('economicLossResult');
+    const regulationContent = document.getElementById('regulationContent');
+    const infoBtn = document.getElementById('infoBtn');
+    const infoModal = document.getElementById('infoModal');
+    const closeModal = document.getElementById('closeModal');
+    const confirmModal = document.getElementById('confirmModal');
+    const modalContent = document.getElementById('modalContent');
+
+    // 全局变量
+    let selectedViolation = null;
+    let selectedAmount = 0;
+
+    // 初始化矩阵式违纪类型按钮
+    function initViolationMatrix() {
+      violationData.forEach(violation => {
+        const button = document.createElement('button');
+        button.className = 'matrix-btn';
+        button.setAttribute('data-id', violation.id);
+        button.innerHTML = `
+          <i class="fa ${violation.icon} text-primary text-xl mb-2"></i>
+          <span class="text-sm">${violation.name}</span>
+        `;
+        
+        button.addEventListener('click', () => {
+          // 移除其他按钮的选中状态
+          document.querySelectorAll('.matrix-btn').forEach(btn => {
+            btn.classList.remove('active');
+          });
+          // 添加当前按钮的选中状态
+          button.classList.add('active');
+          
+          // 记录选中的违纪类型
+          selectedViolation = violation;
+          selectedViolationName.textContent = violation.name;
+          
+          // 初始化金额选择区域
+          initAmountButtons(violation);
+          initAmountLevelInfo(violation);
+          
+          // 显示金额选择区域
+          amountSection.classList.remove('hidden');
+          amountSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          
+          // 重置计算按钮状态
+          calculateBtn.disabled = true;
+          selectedAmount = 0;
+          customAmount.value = '';
+        });
+        
+        violationMatrix.appendChild(button);
+      });
+    }
+
+    // 初始化金额快速选择按钮
+    function initAmountButtons(violation) {
+      amountButtons.innerHTML = '';
+      
+      violation.quickAmounts.forEach(amount => {
+        const button = document.createElement('button');
+        button.className = 'amount-btn';
+        button.textContent = formatCurrency(amount);
+        
+        button.addEventListener('click', () => {
+          // 移除其他按钮的选中状态
+          document.querySelectorAll('.amount-btn').forEach(btn => {
+            btn.classList.remove('active');
+          });
+          // 添加当前按钮的选中状态
+          button.classList.add('active');
+          
+          // 记录选中的金额
+          selectedAmount = amount;
+          customAmount.value = '';
+          
+          // 启用计算按钮
+          calculateBtn.disabled = false;
+        });
+        
+        amountButtons.appendChild(button);
+      });
+    }
+
+    // 初始化金额档次说明
+    function initAmountLevelInfo(violation) {
+      let infoHtml = '<div class="font-medium mb-1">金额档次说明：</div>';
+      violation.levels.forEach(level => {
+        const maxText = level.max === Infinity ? '以上' : `-${formatCurrency(level.max)}`;
+        infoHtml += `
+          <div class="flex items-center mb-1">
+            <span class="w-40">${formatCurrency(level.min)}-${maxText}：</span>
+            <span class="text-primary font-medium">${level.level}</span>
+          </div>
+        `;
+      });
+      amountLevelInfo.innerHTML = infoHtml;
+    }
+
+    // 格式化金额显示
+    function formatCurrency(amount) {
+      if (amount >= 10000) {
+        return (amount / 10000).toFixed(1) + '万';
+      }
+      return amount.toLocaleString('zh-CN');
+    }
+
+    // 根据金额获取对应的处罚等级
+    function getLevelByAmount(violation, amount) {
+      for (let i = violation.levels.length - 1; i >= 0; i--) {
+        const level = violation.levels[i];
+        if (amount >= level.min) {
+          return level;
+        }
+      }
+      return violation.levels[0];
+    }
+
+    // 计算违纪成本
+    function calculateCost() {
+      if (!selectedViolation || selectedAmount <= 0) {
+        alert('请先选择违纪类型并输入有效金额');
+        return;
+      }
+      
+      // 获取对应的处罚等级
+      const level = getLevelByAmount(selectedViolation, selectedAmount);
+      
+      // 更新结果区域
+      updateResultList(punishmentResult, level.punishment);
+      updateResultList(criminalPunishmentResult, level.criminalPunishment);
+      updateResultList(politicalLossResult, level.politicalLoss);
+      updateResultList(economicLossResult, level.economicLoss);
+      
+      // 更新条例参考
+      updateRegulationContent(selectedViolation);
+      
+      // 显示结果区域并滚动到结果
+      resultSection.classList.remove('hidden');
+      regulationSection.classList.remove('hidden');
+      
+      // 添加动画效果
+      const resultCards = resultSection.querySelectorAll('.card-shadow');
+      resultCards.forEach((card, index) => {
+        setTimeout(() => {
+          card.classList.add('scale-100', 'opacity-100');
+          card.classList.remove('scale-95', 'opacity-0');
+        }, 150 * index);
+      });
+      
+      // 滚动到结果区域
+      resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // 更新结果列表
+    function updateResultList(element, items) {
+      element.innerHTML = '';
+      items.forEach((item, index) => {
+        const li = document.createElement('div');
+        li.className = 'flex items-center animate-fadeIn';
+        li.style.animationDelay = `${index * 100}ms`;
+        li.innerHTML = `
+          <i class="fa fa-angle-right text-primary mr-2"></i>
+          <span>${item}</span>
+        `;
+        element.appendChild(li);
+      });
+    }
+
+    // 更新条例参考内容
+    function updateRegulationContent(violation) {
+      regulationContent.innerHTML = '';
+      violation.regulations.forEach((regulation, index) => {
+        const div = document.createElement('div');
+        div.className = 'pb-3 border-b border-gray-100 last:border-0 last:pb-0 animate-fadeIn';
+        div.style.animationDelay = `${index * 150}ms`;
+        div.innerHTML = `
+          <h4 class="font-medium text-secondary mb-1">相关条例 ${index + 1}</h4>
+          <p class="text-gray-600 text-xs leading-relaxed">${regulation}</p>
+        `;
+        regulationContent.appendChild(div);
+      });
+    }
+
+    // 模态框控制
+    function openModal() {
+      infoModal.classList.remove('hidden');
+      setTimeout(() => {
+        modalContent.classList.remove('scale-95', 'opacity-0');
+        modalContent.classList.add('scale-100', 'opacity-100');
+      }, 10);
+    }
+
+    function closeModalFunc() {
+      modalContent.classList.remove('scale-100', 'opacity-100');
+      modalContent.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        infoModal.classList.add('hidden');
+      }, 300);
+    }
+
+    // 事件监听
+    document.addEventListener('DOMContentLoaded', () => {
+      initViolationMatrix();
+      
+      // 自定义金额输入事件
+      customAmount.addEventListener('input', () => {
+        const amount = parseInt(customAmount.value) || 0;
+        if (amount > 0) {
+          // 移除快速选择按钮的选中状态
+          document.querySelectorAll('.amount-btn').forEach(btn => {
+            btn.classList.remove('active');
+          });
+          // 记录输入的金额
+          selectedAmount = amount;
+          // 启用计算按钮
+          calculateBtn.disabled = false;
+        } else {
+          // 禁用计算按钮
+          calculateBtn.disabled = true;
+        }
+      });
+      
+      // 计算按钮点击事件
+      calculateBtn.addEventListener('click', calculateCost);
+      
+      // 模态框相关事件
+      infoBtn.addEventListener('click', openModal);
+      closeModal.addEventListener('click', closeModalFunc);
+      confirmModal.addEventListener('click', closeModalFunc);
+      infoModal.addEventListener('click', (e) => {
+        if (e.target === infoModal) closeModalFunc();
+      });
+    });
+
+    // 添加动画样式
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-fadeIn {
+        animation: fadeIn 0.5s ease forwards;
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>
